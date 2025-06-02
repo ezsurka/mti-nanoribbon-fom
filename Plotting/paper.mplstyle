@@ -1,0 +1,55 @@
+# Matplotlib style for scientific plotting
+
+# Set color cycle
+# Set line style as well for black and white graphs
+axes.prop_cycle : (cycler('color', ['k', 'tab:red', 'tab:blue', 'tab:green']) + cycler('ls', ['-', '--', ':', '-.']))
+
+# Set default figure size
+figure.dpi : 600
+
+# Set x axis
+xtick.direction : in
+xtick.major.size : 3
+xtick.major.width : 0.5
+xtick.minor.size : 1.5
+xtick.minor.width : 0.5
+xtick.minor.visible : True
+xtick.top : True
+
+# Set y axis
+ytick.direction : in
+ytick.major.size : 3
+ytick.major.width : 0.5
+ytick.minor.size : 1.5
+ytick.minor.width : 0.5
+ytick.minor.visible : True
+ytick.right : True
+
+# Set line widths
+axes.linewidth : 0.5
+grid.linewidth : 0.5
+lines.linewidth : 1.
+
+# Remove legend frame
+legend.frameon : False
+
+# Font Family
+font.family: serif
+font.serif: Palatino
+mathtext.fontset : dejavusans
+
+# Font sizes
+font.size : 9
+axes.labelsize : 9
+axes.titlesize : 9
+legend.fontsize : 9
+xtick.labelsize : 9
+ytick.labelsize : 9
+
+# Use LaTeX for math formatting
+text.usetex : True
+text.latex.preamble : \usepackage{amsmath} \usepackage{amssymb}
+
+# Always save as
+savefig.dpi : 300
+savefig.pad_inches : 0
