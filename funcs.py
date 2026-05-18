@@ -403,7 +403,7 @@ def optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode):
 
     if a < 0 and (h_mode == 0 or h_mode == 3):
         pos = np.where( [d['h_mode'] == h_mode and d['p_mode'] == p_mode for d in a_dict] )[0][0]
-        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 9):        
+        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 4):        
             a = W / np.ceil(W/a_dict[pos]['a'])
         else:
             a = W / np.ceil(W/10)
@@ -417,7 +417,7 @@ def optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode):
     if (a_z < 0 and a_z > -100) and (h_mode == 0 or h_mode == 3):
         points_z = abs(a_z)
         pos = np.where( [d['h_mode'] == h_mode and d['p_mode'] == p_mode for d in a_dict] )[0][0]
-        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 9):
+        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 4):
             max_a_z = T / np.ceil(T/a_dict[pos]['a_z'])
         else:
             max_a_z = T / np.ceil(T/5)
@@ -686,7 +686,7 @@ def get_gap(k,lead, params):
     
     return (bott_cond - top_val)/2
 
-def get_continuum_spectrum(h_mode, p_mode, ph_symmetry, params, k_range=(0,0.5), k_type="k_x", N=1000, **kwargs):
+def get_continuum_spectrum(h_mode, p_mode, ph_symmetry, k_range=(0,0.5), k_type="k_x", N=1000, **kwargs):
 
     params = param_list[p_mode].copy()
     
@@ -716,7 +716,7 @@ def get_continuum_spectrum(h_mode, p_mode, ph_symmetry, params, k_range=(0,0.5),
 
     return np.array(E)
 
-def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu, u_B, u_T, h_mode, p_mode, ph_symmetry, sym, num_bands, k, k_type="k_x", directions="x", **kwargs):
+def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu,  h_mode, p_mode, ph_symmetry, sym, num_bands, k, k_type="k_x", directions="x", **kwargs):
     
     params = param_list[p_mode].copy()
             
@@ -734,7 +734,6 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu, u_B, u_T, h_mode, 
         ph_symmetry=ph_symmetry,
         vector_potential="[0, - B_x * (z - {}), 0]".format(T),
         subst={'Delta': "Delta_lead(delta, x, y, z)",
-               'U':   "U_lead(u_B, u_T, x, y, z)"},
         ham_type=ham_type        
     )
     
@@ -756,7 +755,9 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu, u_B, u_T, h_mode, 
     params['m1'] = 0
     params['D'] = 0    
     params['S_imp'] = 0
-    
+    params['u_T'] = 0    
+    params['u_B'] = 0    
+
     def h_k(**k_args):
         return syst.hamiltonian_submatrix(params=dict(**k_args, **params))
     
@@ -768,13 +769,20 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu, u_B, u_T, h_mode, 
         ks[key] = val
     ks[keys[which_position]] = k
    
-    Es = sla.eigs(h_k(**ks), k = num_bands, sigma = 0, return_eigenvectors=False)
-    
-    data = dict(
-        Es=Es.real,
-        mn=0
-    )
-    return data
+    if get_wf == True:
+        Es, wfs = sla.eigs(h_k(**ks), k = num_bands, sigma = 0, return_eigenvectors=True)
+        data = dict(
+            Es=Es.real,
+            wfs=wfs,
+            mn=0
+        )
+    else:
+        Es = sla.eigs(h_k(**ks), k = num_bands, sigma = 0, return_eigenvectors=False)
+        data = dict(
+            Es=Es.real,
+            mn=0
+        )
+
 
 def phase_diagram(a, a_z, T, W, delta, flux, m_z, mu, m0, m1, D, h_mode, ph_symmetry, p_mode):
     
@@ -1828,7 +1836,8 @@ def finite_spectrum(
         rhos_p_mean=np.mean(rhos_p_list, 0),
         rhos_h_mean=np.mean(rhos_h_list, 0),
         rhos_all_mean=np.mean(rhos_all_list, 0),
-        solver_time_mean=np.mean(solver_time)
+        solver_time_mean=np.mean(solver_time),
+        rhos = rhos_all_list
     )
     return data
 

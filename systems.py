@@ -25,7 +25,6 @@ def get_sympy_hamiltonian(ham_type='3D', ph_symmetry=True, subst=dict()):
         if ph_symmetry:
             ham = (
                 "-mu_ti  * kron(sigma_z, sigma_0, sigma_0) + "
-                "-U      * kron(sigma_z, sigma_0, sigma_0) + "
                 "epsilon * kron(sigma_z, sigma_0, sigma_0) + "
                 "M * kron(sigma_z, sigma_0, sigma_z) - "
                 "A_perp * k_x * kron(sigma_z, sigma_y, sigma_x) + "
@@ -39,7 +38,6 @@ def get_sympy_hamiltonian(ham_type='3D', ph_symmetry=True, subst=dict()):
         else:
             ham = (
                 "-mu_ti  * kron(sigma_0, sigma_0) + "
-                "-U      * kron(sigma_0, sigma_0) + "
                 "epsilon * kron(sigma_0, sigma_0) + "
                 "M * kron(sigma_0, sigma_z) - "
                 "A_perp * k_x * kron(sigma_y, sigma_x) + "
@@ -211,20 +209,20 @@ def get_continuum_ham(ham_type='3D', ph_symmetry=False):
         f = sympy.lambdify( (k_x, k_y, k_z, P_1, P_2, P_3, Q_1, Q_2, Q_3, F_1, F_3, F_5, F_7, K_1, K_3, K_5, K_7, E_1, E_3, E_5, E_7, U_35, V_35, F_37, K_37, U_47, V_47, U_58, V_58, m_z, mu_ti), H )
         
     elif ham_type == '4band':  
-        A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, U = sympy.symbols('A_0 B_0 C_0 C_1 C_2 M_0 M_1 M_2 R_1 R_2 m_z S_imp mu_ti U', real = True)
+        A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti = sympy.symbols('A_0 B_0 C_0 C_1 C_2 M_0 M_1 M_2 R_1 R_2 m_z S_imp mu_ti', real = True)
         if ph_symmetry == True:
             re, im, Delta = sympy.symbols('re im Delta')
-            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, U, re, im, Delta), H )
+            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, re, im, Delta), H )
         else:
-            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, U), H )        
+            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti), H )        
         
     elif ham_type == '3D': 
-        A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, U = sympy.symbols('A_perp A_z M_0 M_perp M_z C_0 C_perp C_z m_z S_imp mu_ti U', real = True)
+        A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti = sympy.symbols('A_perp A_z M_0 M_perp M_z C_0 C_perp C_z m_z S_imp mu_ti', real = True)
         if ph_symmetry == True:
             re, im, Delta = sympy.symbols('re im Delta')
-            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, U, re, im, Delta), H )
+            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, re, im, Delta), H )
         else:
-            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, U), H )
+            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti), H )
     return f
 
 @tools.memoize
