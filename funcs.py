@@ -329,7 +329,7 @@ fnames = [
 
 for fname in fnames:
 
-    path = "fit_"+fname+".pkl"
+    path = "material_params/fit_"+fname+".pkl"
 
     with open(path, 'rb') as f:
         params = pickle.load(f)
@@ -339,8 +339,8 @@ for fname in fnames:
 param_list = param_list+[Bi2Se3_nechaev, Bi2Te3_nechaev, Sb2Te3_nechaev]
 
 #create BST: (Bi0.8Sb1.2)2Te3
-path_bite = "fit_"+fnames[1]+".pkl"
-path_sbte = "fit_"+fnames[2]+".pkl"
+path_bite = "material_params/fit_"+fnames[1]+".pkl"
+path_sbte = "material_params/fit_"+fnames[2]+".pkl"
 #index 14
 with open(path_bite, 'rb') as f:
     params_bite = pickle.load(f)
@@ -359,11 +359,11 @@ params_bst.update(C_0=0, R_1=0, R_2=0, m_z=0, S_imp=0, mu_ti=0, conjugate=np.con
 #param_list.append(params_bst)
 
 #Get correct lattice constants
-with open('a_optimal_90.pkl', 'rb') as f:
+with open('material_params/a_optimal_90.pkl', 'rb') as f:
     a_optimal_90 = pickle.load(f)
-with open('a_optimal_80.pkl', 'rb') as f:
+with open('material_params/a_optimal_80.pkl', 'rb') as f:
     a_optimal_80 = pickle.load(f)
-with open('H_eff_parameters.pkl', 'rb') as f:
+with open('material_params/H_eff_parameters.pkl', 'rb') as f:
     H_eff_parameters = pickle.load(f)    
 sigma_0 = np.identity(2)
 sigma_x = np.array([[0, 1], [1, 0]])
