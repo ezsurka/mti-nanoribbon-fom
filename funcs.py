@@ -14,6 +14,7 @@ from scipy import optimize, signal
 from numpy.linalg import eigvals
 import matplotlib.pyplot as plt
 import pickle
+import pandas as pd
 
 # Internal imports
 import systems
@@ -325,22 +326,23 @@ fnames = [
            'Bi2Te3_max_k0.3_points_x15_points_z75_Philipp',
            'Sb2Te3_max_k0.3_points_x20_points_z40_Philipp',
 ]
-#indexes 11,12,13
+#indexes 11,12,13, 14,15,16
 
 for fname in fnames:
 
-    path = "material_params/fit_"+fname+".pkl"
+    path = "fit_"+fname+".pkl"
 
     with open(path, 'rb') as f:
         params = pickle.load(f)
         params.update(C_0=0, R_1=0, R_2=0, m_z=0, S_imp=0, mu_ti=0, conjugate=np.conj, U=0)
         param_list.append(params)
-        
+
+#indexes 17,18,19
 param_list = param_list+[Bi2Se3_nechaev, Bi2Te3_nechaev, Sb2Te3_nechaev]
 
 #create BST: (Bi0.8Sb1.2)2Te3
-path_bite = "material_params/fit_"+fnames[1]+".pkl"
-path_sbte = "material_params/fit_"+fnames[2]+".pkl"
+path_bite = "fit_"+fnames[1]+".pkl"
+path_sbte = "fit_"+fnames[2]+".pkl"
 #index 14
 with open(path_bite, 'rb') as f:
     params_bite = pickle.load(f)
@@ -356,14 +358,30 @@ def sum_dict(d1, d2, weigth):
 params_bst = sum_dict(params_bite, params_sbte, 0.8/2)
 params_bst.update(C_0=0, R_1=0, R_2=0, m_z=0, S_imp=0, mu_ti=0, conjugate=np.conj)
 
-#param_list.append(params_bst)
+#fname_spin = ["spin_textures/A5pJ_Ms300k_Ku1_"+str(i)+"kJ.ovf" for i in [30,35,40,45,50]] 
+
+#fname_spin = fname_spin + ['spin_textures/A5pJ_Ms300k_Ku1_50kJ_DMI_'+str(i)+'mJ.ovf' for i in [0,10,20,30,40,50]]
+
+fname_spin = ["spin_textures/runs/A"+str(5)+"pJ_Ms"+str(300)+"k_Ku1_"+str(i)+"kJ.ovf" for i in [30,32.5,35,37.5,40,42.5,45,46,47,48,49,50]]
+
+dfs = [pd.read_csv(
+    name,
+    header=None,
+    skiprows=28,
+    skipfooter=2,
+    delimiter=' ',
+    index_col=False,
+    names=['u', 'v', 'w']
+) for name in fname_spin]
+
+spin_textures = [np.array(df).reshape(8,1024,64,3) for df in dfs]
 
 #Get correct lattice constants
-with open('material_params/a_optimal_90.pkl', 'rb') as f:
+with open('a_optimal_90.pkl', 'rb') as f:
     a_optimal_90 = pickle.load(f)
-with open('material_params/a_optimal_80.pkl', 'rb') as f:
+with open('a_optimal_80.pkl', 'rb') as f:
     a_optimal_80 = pickle.load(f)
-with open('material_params/H_eff_parameters.pkl', 'rb') as f:
+with open('H_eff_parameters.pkl', 'rb') as f:
     H_eff_parameters = pickle.load(f)    
 sigma_0 = np.identity(2)
 sigma_x = np.array([[0, 1], [1, 0]])
@@ -403,7 +421,7 @@ def optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode):
 
     if a < 0 and (h_mode == 0 or h_mode == 3):
         pos = np.where( [d['h_mode'] == h_mode and d['p_mode'] == p_mode for d in a_dict] )[0][0]
-        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 4):        
+        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 9):        
             a = W / np.ceil(W/a_dict[pos]['a'])
         else:
             a = W / np.ceil(W/10)
@@ -417,7 +435,7 @@ def optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode):
     if (a_z < 0 and a_z > -100) and (h_mode == 0 or h_mode == 3):
         points_z = abs(a_z)
         pos = np.where( [d['h_mode'] == h_mode and d['p_mode'] == p_mode for d in a_dict] )[0][0]
-        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 4):
+        if (h_mode == 0 and p_mode < 4) or (h_mode == 3 and p_mode > 9):
             max_a_z = T / np.ceil(T/a_dict[pos]['a_z'])
         else:
             max_a_z = T / np.ceil(T/5)
@@ -471,13 +489,13 @@ def optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode):
             mu = -(m0+m_z)*D/m1
         else:
             mu = 0
-        
+        delta_profile_function
     if h_mode != 1:
         T=T*(1+1e-8)
         
     return a, a_z, W, T, mu, m_z, params, h_mode, p_mode
 
-def delta_profile_funtion(T):
+def delta_profile_function(T):
     def d(delta, x, y, z):
         if z > T - 10:
             return delta
@@ -487,7 +505,7 @@ def delta_profile_funtion(T):
             return 0.0
     return d
 
-def u_profile_funtion(T):
+def u_profile_function(T):
     def u(u_B, u_T, x, y, z):
         if z < 10:
             return u_B
@@ -497,8 +515,44 @@ def u_profile_funtion(T):
             return 0.0
     return u
 
+def get_m_x_top(T):
+    def m_x_top(site, spin_index, M):
+        ind_x, ind_y = site.tag
+        return M*spin_textures[spin_index][7,ind_x,ind_y,0]
+    return m_x_top
 
-def delta_profile_funtion_fitite_ribbon(T, L, L_nodelta):
+def get_m_y_top(T):
+    def m_y_top(site, spin_index, M):
+        ind_x, ind_y = site.tag
+        return M*spin_textures[spin_index][7,ind_x,ind_y,1]
+    return m_y_top
+
+def get_m_z_top(T):
+    def m_z_top(site, spin_index, M):
+        ind_x, ind_y = site.tag
+        return M*spin_textures[spin_index][7,ind_x,ind_y,2]
+    return m_z_top
+
+
+def get_m_x_bot(T):
+    def m_x_bot(site, spin_index, M):
+        ind_x, ind_y = site.tag
+        return M*spin_textures[spin_index][0,ind_x,ind_y,0]
+    return m_x_bot
+
+def get_m_y_bot(T):
+    def m_y_bot(site, spin_index, M):
+        ind_x, ind_y = site.tag
+        return M*spin_textures[spin_index][0,ind_x,ind_y,1]
+    return m_y_bot
+
+def get_m_z_bot(T):
+    def m_z_bot(site, spin_index, M):
+        ind_x, ind_y = site.tag
+        return M*spin_textures[spin_index][0,ind_x,ind_y,2]
+    return m_z_bot
+
+def delta_profile_function_fitite_ribbon(T, L, L_nodelta):
     def d(delta, x, y, z):
         if (z == T and x >= L_nodelta and x <= L-L_nodelta):
             return delta
@@ -507,7 +561,7 @@ def delta_profile_funtion_fitite_ribbon(T, L, L_nodelta):
     return d
 
 
-def delta_profile_funtion_all():
+def delta_profile_function_all():
     def d(delta, x, y, z):
         return delta
     return d
@@ -686,7 +740,7 @@ def get_gap(k,lead, params):
     
     return (bott_cond - top_val)/2
 
-def get_continuum_spectrum(h_mode, p_mode, ph_symmetry, k_range=(0,0.5), k_type="k_x", N=1000, **kwargs):
+def get_continuum_spectrum(h_mode, p_mode, ph_symmetry, params, k_range=(0,0.5), k_type="k_x", N=1000, **kwargs):
 
     params = param_list[p_mode].copy()
     
@@ -716,7 +770,9 @@ def get_continuum_spectrum(h_mode, p_mode, ph_symmetry, k_range=(0,0.5), k_type=
 
     return np.array(E)
 
-def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu,  h_mode, p_mode, ph_symmetry, sym, num_bands, k, k_type="k_x", directions="x", **kwargs):
+def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu, u_B, u_T, h_mode, p_mode, ph_symmetry, sym, num_bands, k, k_type="k_x", directions="x", **kwargs):
+
+    a, a_z, W, T, mu, m_z, params, h_mode, p_mode = optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode)
     
     params = param_list[p_mode].copy()
             
@@ -734,7 +790,9 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu,  h_mode, p_mode, p
         ph_symmetry=ph_symmetry,
         vector_potential="[0, - B_x * (z - {}), 0]".format(T),
         subst={'Delta': "Delta_lead(delta, x, y, z)",
-        ham_type=ham_type        
+               'U':   "U_lead(u_B, u_T, x, y, z)"},
+        ham_type=ham_type,
+        directions=directions
     )
     
     syst = kwant.wraparound.wraparound(syst).finalized()
@@ -746,8 +804,8 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu,  h_mode, p_mode, p
 
     params['a'] = a
     params['a_z'] = a_z       
-    params['Delta_lead'] = delta_profile_funtion(T)
-    params['U_lead'] = u_profile_funtion(T)    
+    params['Delta_lead'] = delta_profile_function(T)
+    params['U_lead'] = u_profile_function(T)    
     params['mu_ti'] = mu
     params['m_z'] = m_z
     params['delta'] = delta
@@ -755,9 +813,9 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu,  h_mode, p_mode, p
     params['m1'] = 0
     params['D'] = 0    
     params['S_imp'] = 0
-    params['u_T'] = 0    
-    params['u_B'] = 0    
-
+    params['u_B'] = u_B
+    params['u_T'] = u_T
+    
     def h_k(**k_args):
         return syst.hamiltonian_submatrix(params=dict(**k_args, **params))
     
@@ -769,20 +827,13 @@ def get_discretized_spectrum(a, a_z, L, W, T, delta, m_z, mu,  h_mode, p_mode, p
         ks[key] = val
     ks[keys[which_position]] = k
    
-    if get_wf == True:
-        Es, wfs = sla.eigs(h_k(**ks), k = num_bands, sigma = 0, return_eigenvectors=True)
-        data = dict(
-            Es=Es.real,
-            wfs=wfs,
-            mn=0
-        )
-    else:
-        Es = sla.eigs(h_k(**ks), k = num_bands, sigma = 0, return_eigenvectors=False)
-        data = dict(
-            Es=Es.real,
-            mn=0
-        )
-
+    Es = sla.eigs(h_k(**ks), k = num_bands, sigma = 0, return_eigenvectors=False)
+    
+    data = dict(
+        Es=Es.real,
+        mn=0
+    )
+    return data,params
 
 def phase_diagram(a, a_z, T, W, delta, flux, m_z, mu, m0, m1, D, h_mode, ph_symmetry, p_mode):
     
@@ -811,8 +862,8 @@ def phase_diagram(a, a_z, T, W, delta, flux, m_z, mu, m0, m1, D, h_mode, ph_symm
 
     params['a'] = a
     params['a_z'] = a_z       
-    params['Delta_lead'] = delta_profile_funtion(T)
-    params['U_lead'] = u_profile_funtion(T)    
+    params['Delta_lead'] = delta_profile_function(T)
+    params['U_lead'] = u_profile_function(T)    
     params['mu_ti'] = mu
     params['m_z'] = m_z
     params['delta'] = delta
@@ -973,9 +1024,9 @@ def get_fig_of_merit(a, a_z, T, W, delta, m_z, mu, h_mode, u_B=0, u_T=0, get_del
     flux = 0
     
     for key in kwargs.keys():
-        params[key] = kwargs[key]    
+        params[key] = kwargs[key]
 
-    ham_type = ['3D', '2D', 'metal','4band','8band'][h_mode]            
+    ham_type = ['3D', '2D', 'metal','4band','8band','2D_spin'][h_mode]        
         
     lead = systems.make_lead(
         a=a, a_z=a_z, W=W, T=T,
@@ -995,8 +1046,8 @@ def get_fig_of_merit(a, a_z, T, W, delta, m_z, mu, h_mode, u_B=0, u_T=0, get_del
 
     params['a'] = a
     params['a_z'] = a_z       
-    params['Delta_lead'] = delta_profile_funtion(T)
-    params['U_lead']   = u_profile_funtion(T)    
+    params['Delta_lead'] = delta_profile_function(T)
+    params['U_lead']   = u_profile_function(T)    
     params['mu_ti'] = mu
     params['m_z'] = m_z
     params['u_B'] = u_B
@@ -1348,74 +1399,6 @@ def get_fig_of_merit(a, a_z, T, W, delta, m_z, mu, h_mode, u_B=0, u_T=0, get_del
     )
     return data
 
-def gap_search_k_fast(a, a_z, T, W, mu, m_z, delta, m0, m1, D, h_mode,p_mode):
-
-    params = param_list[p_mode].copy()
-    params.update(default_params)
-    
-    ham_type = ['3D', '2D', 'metal','4band','8band'][h_mode] 
-    
-    flux = 0
-    
-    lead = systems.c_lead(
-        a=a, a_z=a_z, W=W, T=T,
-        ph_symmetry=False,
-        vector_potential="[0, - B_x * (z - {}), 0]".format(T),
-        subst={'Delta': "Delta_lead(delta, x, y, z)",
-               'U':   "U_lead(u_B, u_T, x, y, z)"},
-        ham_type=ham_type        
-    ) 
-    
-    lead = lead.finalized()
-
-    if T == 0 and flux == 0:
-        params.update(dict(B_x=0, B_y=0, B_z=0))
-    else:
-        params.update(dict(B_x=flux/(W*T), B_y=0, B_z=0))
-
-    params['a'] = a
-    params['a_z'] = a_z       
-    params['Delta_lead'] = delta_profile_funtion(T)
-    params['mu_ti'] = mu
-    params['m_z'] = m_z
-    params['delta'] = delta
-    params['m0'] = m0
-    params['m1'] = m1
-    params['D'] = D      
-
-    prop_modes, stab_modes = lead.modes(energy=0, params=params)
-    momenta = prop_modes.momenta
-    
-    lead = systems.make_lead(
-        a=a, a_z=a_z, W=W, T=T,
-        ph_symmetry=ph_symmetry,
-        vector_potential="[0, - B_x * (z - {}), 0]".format(T),
-        subst={'Delta': "Delta_lead(delta, x, y, z)",
-               'U':   "U_lead(u_B, u_T, x, y, z)"},
-        ham_type=ham_type        
-    )
-
-    lead = lead.finalized()    
-
-    start = time.perf_counter()
-
-    gaps = []
-    
-    try:
-        gaps.append( get_gap(0, lead, params) )
-        for k in momenta[momenta > 0]:
-            gaps.append( get_gap(k, lead, params) )
-    except:
-        print("Run error")
-        gaps = [0]
-    data = dict(
-        gap=min(gaps),
-        gaps=gaps,
-        momenta=momenta,
-        time=time.perf_counter()-start
-    )
-    return data
-
 def gap_search_k(a, a_z, T, W, mu, m_z, delta, h_mode, params):
     
     ham_type = ['3D', '2D', 'metal','4band','8band'][h_mode] 
@@ -1473,8 +1456,6 @@ def gap_search_k(a, a_z, T, W, mu, m_z, delta, h_mode, params):
     )
     rhos = get_rhos(lead, sum=True)
 
-#    return E_k0, wfs_k0, rhos
-
     E_k0 = E_k0.real
     wfs_k0 = wfs_k0[:, E_k0 > 0]
     E_k0 = E_k0[E_k0 > 0]
@@ -1486,23 +1467,29 @@ def gap_search_k(a, a_z, T, W, mu, m_z, delta, h_mode, params):
 
     momenta_gap[0] = 0
     gaps[0] = fist_h_band_E
-    #gaps[0] = np.min(E_k0)
+    gaps[0] = np.min(E_k0)
 
     if num_modes == 0:
-        sol = optimize.root_scalar(
-            f, x0=E_k0, bracket=[-1e-13, 0.3], method='bisect'
+        delta_k = 1e-3
+        bounds = (- delta_k, delta_k)
+        _res = optimize.minimize_scalar(
+            E_k, bounds=bounds, method='bounded',
         )
+        momenta_cros[1] = 0
+        momenta_gap[1] = _res.x
+        gaps[1] = _res.fun
+        res.append(_res)
 
-        data = dict(
-            gap=abs(sol.root),
-            gap_log=np.log(abs(sol.root)),
-            gaps=gaps,
-            momenta_cros=momenta_cros,
-            momenta_gap=momenta_gap,
-            res=res,
-            time=time.perf_counter()-start,
-            uniform=1,
-        )
+#        data = dict(
+#            gap=abs(sol.root),
+#            gap_log=np.log(abs(sol.root)),
+#            gaps=gaps,
+#            momenta_cros=momenta_cros,
+#            momenta_gap=momenta_gap,
+#            res=res,
+#            time=time.perf_counter()-start,
+#            uniform=1,
+#        )
     else:
         for i, j in enumerate(np.arange(num_modes//4 + (num_modes//2) % 2)):
             k = momenta[j]
@@ -1519,17 +1506,16 @@ def gap_search_k(a, a_z, T, W, mu, m_z, delta, h_mode, params):
             gaps[i+1] = _res.fun
             res.append(_res)
 
-        data = dict(
-            gap=min(gaps),
-            gap_log=np.log(min(gaps)),
-            gaps=gaps,
-            momenta_cros=momenta_cros,
-            momenta_gap=momenta_gap,
-            res=res,
-            time=time.perf_counter()-start,
-            uniform=1,
-        )
-#    print(data)
+    data = dict(
+        gap=min(gaps),
+        gap_log=np.log(min(gaps)),
+        gaps=gaps,
+        momenta_cros=momenta_cros,
+        momenta_gap=momenta_gap,
+        res=res,
+        time=time.perf_counter()-start,
+        uniform=1,
+    )
     return data
 
 
@@ -1562,6 +1548,7 @@ def majorana_num(lead, params):
 
     return pfaf
 
+
 def calculate_majorana_num(a, a_z, T, W, mu, m_z, delta, h_mode, params):
 
     ham_type = ['3D', '2D', 'metal','4band','8band'][h_mode] 
@@ -1592,6 +1579,7 @@ def calculate_majorana_num(a, a_z, T, W, mu, m_z, delta, h_mode, params):
 
     return dict(mn=majorana_num(lead, params))
 
+    
 def calculate_bulk_spectrum(
         a, a_z, T, W, k, delta, flux, m_z, mu, m0, m1, D,
         ph_symmetry, num_bands, m_eff, h_mode, p_mode, kwargs
@@ -1609,6 +1597,8 @@ def calculate_bulk_spectrum(
         subst={'Delta': "Delta_lead(delta, x, y, z)"},
         ham_type=ham_type
     )
+
+
 def calculate_lead_spectrum(
         a, a_z, T, W, k, delta, flux, m_z, mu, u_B, u_T,
         ph_symmetry, num_bands, m_eff, h_mode, p_mode, get_wf, sym, **kwargs
@@ -1623,14 +1613,12 @@ def calculate_lead_spectrum(
     
     a, a_z, W, T, mu, m_z, params, h_mode, p_mode = optimize_parameters(a, a_z, W, T, mu, m_z, params, sym, h_mode, p_mode)
     
-    #print(params, a, a_z, W, T, mu)    
-
     params.update(default_params)
     
     for key in kwargs.keys():
         params[key] = kwargs[key]
         
-    ham_type = ['3D', '2D', 'metal','4band','8band'][h_mode]        
+    ham_type = ['3D', '2D', 'metal','4band','8band','2D_spin'][h_mode]        
         
     lead = systems.make_lead(
         a=a, a_z=a_z, W=W, T=T,
@@ -1651,8 +1639,8 @@ def calculate_lead_spectrum(
     params['a'] = a
     params['a_z'] = a_z   
     params['delta'] = delta
-    params['Delta_lead'] = delta_profile_funtion(T)
-    params['U_lead'] = u_profile_funtion(T)    
+    params['Delta_lead'] = delta_profile_function(T)
+    params['U_lead'] = u_profile_function(T)    
     params['mu_ti'] = mu
     params['m_z'] = m_z
     params['u_B'] = u_B
@@ -1661,10 +1649,6 @@ def calculate_lead_spectrum(
     params['mu_m'] = mu
     params['C_m'] = 3.81/m_eff
     params['S_imp'] = 0
-#    params['m0'] = m0
-#    params['m1'] = m1
-#    params['D'] = D
-    print(params, a, a_z, W, T)
     
     Es, wfs = bands(k, lead, params, num_bands)
     Es = Es.real
@@ -1678,8 +1662,8 @@ def calculate_lead_spectrum(
         rhos_h = None
     
     mn = 0
-    if ph_symmetry:
-        mn = majorana_num(lead, params)
+#    if ph_symmetry:
+#        mn = majorana_num(lead, params)
     try:
         gap = np.min([0.1, np.min(Es[Es > 0]) - np.max(Es[Es < 0]) ])
     except:
@@ -1698,7 +1682,6 @@ def calculate_lead_spectrum(
     return data
 
 
-
 def tunnel_conductance_finite_ribbon(
         a, T, W, L, L_nodelta,  W_lead, T_lead, y_pos, z_pos, flux, E,
         m_eff, mu_m, mu_ti, Smag_imp, correlation_length, delta, m_z, n_av):
@@ -1709,7 +1692,7 @@ def tunnel_conductance_finite_ribbon(
 
     params['a'] = a
     params['Delta_metal'] = lambda delta, x, y, z: 0
-    params['Delta_sc'] = delta_profile_funtion_fitite_ribbon(T, L, L_nodelta)
+    params['Delta_sc'] = delta_profile_function_fitite_ribbon(T, L, L_nodelta)
     params['delta'] = delta
     params['mu_ti'] = mu_ti
     params['mu_m'] = mu_m
@@ -1777,7 +1760,6 @@ def spectrum(syst, params, sigma=0, k=20, sort=True, solver='mumps'):
     else:
         return energies, wfs
 
-
 def finite_spectrum(
         a, a_z, T, W, L,
         delta, mu, Smag_imp, m_z,
@@ -1790,8 +1772,11 @@ def finite_spectrum(
         params[key] = kwargs[key]    
 
     L = np.round(L/a,0)*a
-
-    fsyst = systems.make_ti_ribbon(a, a_z, L, W, T)
+    
+    if "spin_index" in params:
+        fsyst = systems.make_ti_ribbon_spin(a, a_z, L, W, T)
+    else:
+        fsyst = systems.make_ti_ribbon(a, a_z, L, W, T)
 
     if T == 0 and flux == 0:
         params.update(dict(B_x=0, B_y=0, B_z=0))
@@ -1803,13 +1788,21 @@ def finite_spectrum(
     params['mu_ti'] = mu
     params['m_z'] = m_z  
     params['delta'] = delta
-    params['Smag_imp'] = Smag_imp   
+    params['Smag_imp'] = Smag_imp
     params['u_T'] = 0
     params['u_B'] = 0
 
+    if "spin_index" in params:
+        params['m_x_top'] = get_m_x_top(T)
+        params['m_y_top'] = get_m_y_top(T)
+        params['m_z_top'] = get_m_z_top(T)
+        params['m_x_bot'] = get_m_x_bot(T)
+        params['m_y_bot'] = get_m_y_bot(T)
+        params['m_z_bot'] = get_m_z_bot(T)
     rhos = get_rhos(fsyst, sum=sum)
 
     Es = []
+    wfss = []
     solver_time = []
     rhos_p_list = []
     rhos_h_list = []
@@ -1829,18 +1822,25 @@ def finite_spectrum(
         rhos_h_list.append([rhos['h'](wf) for wf in wfs.T])
         rhos_all_list.append([rhos['all'](wf) for wf in wfs.T])
         Es.append(energies)
+        wfss.append(wfs)
 
     data = dict(
         Es_mean=np.mean(Es, 0),
         Es = Es,
-        rhos_p_mean=np.mean(rhos_p_list, 0),
-        rhos_h_mean=np.mean(rhos_h_list, 0),
-        rhos_all_mean=np.mean(rhos_all_list, 0),
-        solver_time_mean=np.mean(solver_time),
-        rhos = rhos_all_list
+#        wfss = wfss,
+#        rhos_p_mean=np.mean(rhos_p_list, 0),
+#        rhos_h_mean=np.mean(rhos_h_list, 0),
+#        rhos_all_mean=np.mean(rhos_all_list, 0),
+        solver_time_mean=np.mean(solver_time)
     )
+
+    if "wf" in params:
+        if params["wf"] == True:
+            data['wfss'] = wfss
+
     return data
 
+    
 def finite_spectrum_deltamu(
         a, a_z, T, W, L,
         delta, mu, deltamu, Smag_imp, m_z,

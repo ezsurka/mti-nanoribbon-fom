@@ -25,6 +25,7 @@ def get_sympy_hamiltonian(ham_type='3D', ph_symmetry=True, subst=dict()):
         if ph_symmetry:
             ham = (
                 "-mu_ti  * kron(sigma_z, sigma_0, sigma_0) + "
+                "-U      * kron(sigma_z, sigma_0, sigma_0) + "
                 "epsilon * kron(sigma_z, sigma_0, sigma_0) + "
                 "M * kron(sigma_z, sigma_0, sigma_z) - "
                 "A_perp * k_x * kron(sigma_z, sigma_y, sigma_x) + "
@@ -38,6 +39,7 @@ def get_sympy_hamiltonian(ham_type='3D', ph_symmetry=True, subst=dict()):
         else:
             ham = (
                 "-mu_ti  * kron(sigma_0, sigma_0) + "
+                "-U      * kron(sigma_0, sigma_0) + "
                 "epsilon * kron(sigma_0, sigma_0) + "
                 "M * kron(sigma_0, sigma_z) - "
                 "A_perp * k_x * kron(sigma_y, sigma_x) + "
@@ -50,6 +52,8 @@ def get_sympy_hamiltonian(ham_type='3D', ph_symmetry=True, subst=dict()):
         subst = dict(
             epsilon="(C_0 - C_perp * (k_x**2 + k_y**2) - C_z * k_z**2)",
             M="(M_0 - M_perp * (k_x**2 + k_y**2) - M_z * k_z**2)",
+#            epsilon="(C_0 - 0 * (k_x**2 + k_y**2) - 0 * k_z**2)",
+#            M="(M_0 - 10 * (k_x**2 + k_y**2) - 0 * k_z**2)",            
             **subst
         )
         ham = kwant.continuum.sympify(ham, locals=subst)
@@ -90,6 +94,65 @@ def get_sympy_hamiltonian(ham_type='3D', ph_symmetry=True, subst=dict()):
             **subst
         )
         ham = kwant.continuum.sympify(ham, locals=subst)
+    elif ham_type == '2D_spin':
+        if ph_symmetry:
+            ham = (
+                "-mu_ti * kron(sigma_z, sigma_0, sigma_0) + "
+                " S_imp * kron(sigma_z, sigma_0, sigma_0) + "
+                "-u_B/2 * kron(sigma_z, sigma_0, sigma_0) + "
+                " u_B/2 * kron(sigma_z, sigma_0, sigma_z) + "
+                "-u_T/2 * kron(sigma_z, sigma_0, sigma_0) - "
+                " u_T/2 * kron(sigma_z, sigma_0, sigma_z) + "
+                "hbar * v_F * k_y * kron(sigma_0, sigma_x, sigma_z) - "
+                "hbar * v_F * k_x * kron(sigma_z, sigma_y, sigma_z) + "
+                "m * kron(sigma_z, sigma_0, sigma_x) + "
+                "m_x_top/2 * kron(sigma_z, sigma_x, sigma_0) + "
+                "m_x_top/2 * kron(sigma_z, sigma_x, sigma_z) + "
+                "m_y_top/2 * kron(sigma_z, sigma_y, sigma_0) + "
+                "m_y_top/2 * kron(sigma_z, sigma_y, sigma_z) + "
+                "m_z_top/2 * kron(sigma_z, sigma_z, sigma_0) + "
+                "m_z_top/2 * kron(sigma_z, sigma_z, sigma_z) + "
+                "m_x_bot/2 * kron(sigma_z, sigma_x, sigma_0) - "
+                "m_x_bot/2 * kron(sigma_z, sigma_x, sigma_z) + "
+                "m_y_bot/2 * kron(sigma_0, sigma_y, sigma_0) - "
+                "m_y_bot/2 * kron(sigma_0, sigma_y, sigma_z) + "
+                "m_z_bot/2 * kron(sigma_z, sigma_z, sigma_0) - "
+                "m_z_bot/2 * kron(sigma_z, sigma_z, sigma_z) - "
+                "D * ( k_x**2 + k_y**2 ) * kron(sigma_z, sigma_0, sigma_0) + "               
+                "delta/2 * kron(sigma_y, sigma_y, sigma_0) + "
+                "delta/2 * kron(sigma_y, sigma_y, sigma_z) "
+            )
+        else:
+            ham = (
+                "-mu_ti * kron( sigma_0, sigma_0) + "
+                " S_imp * kron( sigma_0, sigma_0) + "
+                "-u_B/2 * kron( sigma_0, sigma_0) + "
+                " u_B/2 * kron( sigma_0, sigma_z) + "
+                "-u_T/2 * kron( sigma_0, sigma_0) - "
+                " u_T/2 * kron( sigma_0, sigma_z) + "
+                "hbar * v_F * k_y * kron( sigma_x, sigma_z) - "
+                "hbar * v_F * k_x * kron( sigma_y, sigma_z) + "
+                "m * kron( sigma_0, sigma_x) + "
+                "m_x_top/2 * kron(sigma_x, sigma_0) + "
+                "m_x_top/2 * kron(sigma_x, sigma_z) + "
+                "m_y_top/2 * kron(sigma_y, sigma_0) + "
+                "m_y_top/2 * kron(sigma_y, sigma_z) + "
+                "m_z_top/2 * kron(sigma_z, sigma_0) + "
+                "m_z_top/2 * kron(sigma_z, sigma_z) + "
+                "m_x_bot/2 * kron(sigma_x, sigma_0) - "
+                "m_x_bot/2 * kron(sigma_x, sigma_z) + "
+                "m_y_bot/2 * kron(sigma_y, sigma_0) - "
+                "m_y_bot/2 * kron(sigma_y, sigma_z) + "
+                "m_z_bot/2 * kron(sigma_z, sigma_0) - "
+                "m_z_bot/2 * kron(sigma_z, sigma_z) - "
+                "D * ( k_x**2 + k_y**2 ) * kron( sigma_0, sigma_0)"
+            )
+            
+        subst = dict(
+             m = "(m0 - m1 * (k_x**2 + k_y**2))",
+            **subst
+        )
+        ham = kwant.continuum.sympify(ham, locals=subst)        
         
     elif ham_type == '2D_sides':
         if ph_symmetry:
@@ -209,20 +272,20 @@ def get_continuum_ham(ham_type='3D', ph_symmetry=False):
         f = sympy.lambdify( (k_x, k_y, k_z, P_1, P_2, P_3, Q_1, Q_2, Q_3, F_1, F_3, F_5, F_7, K_1, K_3, K_5, K_7, E_1, E_3, E_5, E_7, U_35, V_35, F_37, K_37, U_47, V_47, U_58, V_58, m_z, mu_ti), H )
         
     elif ham_type == '4band':  
-        A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti = sympy.symbols('A_0 B_0 C_0 C_1 C_2 M_0 M_1 M_2 R_1 R_2 m_z S_imp mu_ti', real = True)
+        A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, U = sympy.symbols('A_0 B_0 C_0 C_1 C_2 M_0 M_1 M_2 R_1 R_2 m_z S_imp mu_ti U', real = True)
         if ph_symmetry == True:
             re, im, Delta = sympy.symbols('re im Delta')
-            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, re, im, Delta), H )
+            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, U, re, im, Delta), H )
         else:
-            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti), H )        
+            f = sympy.lambdify( (k_x, k_y, k_z, A_0, B_0, C_0, C_1, C_2, M_0, M_1, M_2, R_1, R_2, m_z, S_imp, mu_ti, U), H )        
         
     elif ham_type == '3D': 
-        A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti = sympy.symbols('A_perp A_z M_0 M_perp M_z C_0 C_perp C_z m_z S_imp mu_ti', real = True)
+        A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, U = sympy.symbols('A_perp A_z M_0 M_perp M_z C_0 C_perp C_z m_z S_imp mu_ti U', real = True)
         if ph_symmetry == True:
             re, im, Delta = sympy.symbols('re im Delta')
-            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, re, im, Delta), H )
+            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, U, re, im, Delta), H )
         else:
-            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti), H )
+            f = sympy.lambdify( (k_x, k_y, k_z, A_perp, A_z, M_0, M_perp, M_z, C_0, C_perp, C_z, m_z, S_imp, mu_ti, U), H )
     return f
 
 @tools.memoize
@@ -304,10 +367,9 @@ def make_lead(
         L = a
     
     vectors_3D = dict(x=(L, 0, 0),y=(0, W, 0),z=(0, 0, T))
-#    vectors_4band = dict(x=(3*L, 0, 0),y=(0, 3*W, 0),z=(0, 0, 3*T))
     vectors_2D = dict(x=(L, 0),y=(0, W))    
     
-    if kwargs['ham_type'] == '2D':
+    if kwargs['ham_type'] == '2D' or kwargs['ham_type'] == '2D_spin':
         if not v:
             v = np.zeros(2)        
         shape_lead = get_shape_2D(L_start=0, W_start=0, L=L, W=W, v=v)
@@ -360,6 +422,22 @@ def make_ti_ribbon(a, a_z, L, W, T):
 
     return syst.finalized()
 
+@tools.memoize
+def make_ti_ribbon_spin(a, a_z, L, W, T):
+    template = get_template(
+        a=a,
+        a_z=a_z,
+        subst={'S_imp': 'S_imp(site, Smag_imp)', 'm_x_top': 'm_x_top(site, spin_index, M)', 'm_y_top': 'm_y_top(site, spin_index, M)', 'm_z_top': 'm_z_top(site, spin_index, M)', 'm_x_bot': 'm_x_bot(site, spin_index, M)', 'm_y_bot': 'm_y_bot(site, spin_index, M)', 'm_z_bot': 'm_z_bot(site, spin_index, M)'},
+        ham_type='2D_spin',
+        vector_potential="[0, - B_x * (z - {}), 0]".format(T),
+        ph_symmetry=True
+    )
+
+    syst = kwant.Builder()
+    shape = get_shape_2D(L_start=0, W_start=0, L=L, W=W, v=np.zeros(2))
+    syst.fill(template, *shape)
+
+    return syst.finalized()
 
 @tools.memoize
 def make_simple_tunnel_finite_junction(
